@@ -21,7 +21,7 @@ def part1(fn='input.txt', target=2020, skip=0):
 
             # Skip in the input if instructed
             if skip > skipped:
-                skipped +=1
+                skipped += 1
                 continue
 
             # Look whether we already seen a number that is a complement to this

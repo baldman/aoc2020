@@ -38,7 +38,7 @@ def run():
     count_over_same_input = partial(count_tree_encounters, 'input.txt')
     pairs = [
         (1, 1),
-        (3, 1),
+        (3, 1),  # Part 1
         (5, 1),
         (7, 1),
         (1, 2)

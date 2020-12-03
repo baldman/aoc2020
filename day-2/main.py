@@ -54,5 +54,6 @@ def run():
     print(f">>> Valid passwords (Part I): {p1_valid_passwords}")
     print(f">>> Valid passwords (Part II): {p2_valid_passwords}")
 
+
 if __name__ == '__main__':
     run()

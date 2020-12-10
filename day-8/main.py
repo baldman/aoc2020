@@ -4,6 +4,7 @@ class Operations:
     @classmethod
     def acc(cls, input_data, registers):
         registers.acc += input_data
+        registers.pc += 1
 
     @classmethod
     def jmp(cls, input_data, registers):
@@ -17,7 +18,7 @@ class Operations:
         """
         Well, this literally does.. nothing
         """
-        ...
+        registers.pc +=1
 
 
 class VM:
@@ -32,9 +33,20 @@ class VM:
         self._program = program
         self._pc_last_index = len(program)-1
         self._seen_pc = set()
+        self._termination_state = -1
+
+    def _dump_regs(self):
+        return f"Register dump:\n" \
+               f"\tPC: {self._registers.pc}\n" \
+               f"\tACC: {self._registers.acc}"
+
+    def _panic(self):
+        msg = f">> PANIC: Loop in the program detected!!!\n"
+        msg += self._dump_regs()
+        raise RuntimeError(msg)
 
     @staticmethod
-    def _parse_instruction(instruction):
+    def parse_instruction(instruction):
         return instruction[:3], int(instruction[3:].strip())
 
     def run_program(self):
@@ -44,40 +56,63 @@ class VM:
                 break
 
             if self._registers.pc in self._seen_pc:
-                msg = f">> PANIC: Loop in the program detected!!!\n " \
-                      f"Register dump:\n" \
-                      f"\tPC: {self._registers.pc}\n" \
-                      f"\tACC: {self._registers.acc}"
-                raise RuntimeError(msg)
+                self._panic()
 
             # Push current PC onto the seen set
             self._seen_pc.add(self._registers.pc)
 
             # Find the instruction to execute
-            instruction, args = self._parse_instruction(self._program[self._registers.pc])
+            instruction, args = self.parse_instruction(
+                self._program[self._registers.pc]
+            )
             execute = getattr(Operations, instruction, None)
 
             if execute is None:
-                raise RuntimeError(f"Unknown instruction {instruction} at address {self._registers.pc}.")
+                msg = f"Unknown instruction {instruction} at address " \
+                      f"{self._registers.pc}."
+                raise RuntimeError(msg)
 
-            print(f">>> DEBUG: {instruction} {args} at address {self._registers.pc}")
             # Run the instruction
             curr_pc = self._registers.pc
             execute(args, self._registers)
 
-            # Advance the program counter register if it was not modified
-            if self._registers.pc == curr_pc:
-                self._registers.pc += 1
-
+        self._termination_state = 0
         print(">>> Program finished")
+        print(self._dump_regs())
 
 
 def run():
-    vm = None
     with open('input.txt', 'r') as f:
-        vm = VM(f.readlines())
+        original_program = f.readlines()
 
-    vm.run_program()
+    # Run in loop to find the "bug"
+    # Better strategy would be to basically just branch the code and register
+    # state and run it from there as opposed to always rerunning the program
+    # in it's entirety, but I am a little lazy to implement that. Not that it
+    # changes complexity directly, but is really a nicer strategy. Leaving for
+    # my future non-lazy self.
+    for pc, raw_instruction in enumerate(original_program):
+        prog_copy = original_program.copy()
+
+        instruction, args = VM.parse_instruction(raw_instruction)
+        if instruction == 'acc':
+            # No point dealing with acc instruction
+            continue
+
+        try:
+            vm = VM(prog_copy)
+            vm.run_program()
+        except RuntimeError:
+            # Flip the instruction and try again
+            instruction = 'jmp' if instruction == 'nop' else 'nop'
+            prog_copy[pc] = f"{instruction} {args}"
+            try:
+                vm = VM(prog_copy)
+                vm.run_program()
+            except RuntimeError:
+                continue
+
+        break
 
 
 if __name__ == '__main__':

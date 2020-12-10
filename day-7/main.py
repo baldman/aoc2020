@@ -28,7 +28,6 @@ def run(which_one):
 
             parsed = re.findall('(\w+\s\w+)\sbags\scontain\s(.*)', line.strip())
             root_node = get_node(parsed[0][0], lut)
-
             child_nodes = re.findall('((\d+)\s(\w+\s\w+))\sbags?[,|\.]\s?', parsed[0][1])
 
             for child in child_nodes:
@@ -59,19 +58,17 @@ def run(which_one):
 
     # 3. Perform a DFS target->children to find and count all using dynamic
     # programming for speed (P2)
-    cache = {}
-
-    def solve_for_node(curr):
+    def solve_for_node(curr, cache):
         my_total = 1
         for chld, cnt in curr.children:
             if chld.name not in cache:
-                cache[chld.name] = solve_for_node(chld)
+                cache[chld.name] = solve_for_node(chld, cache)
 
             my_total += cnt * cache[chld.name]
 
         return my_total
 
-    tot_bags = solve_for_node(lut[which_one]) - 1  # -1 for the starting nodes
+    tot_bags = solve_for_node(lut[which_one], {}) - 1  # -1 for the starting nodes
     print(f'>>> {which_one} needs {tot_bags} bags in it')
 
 
